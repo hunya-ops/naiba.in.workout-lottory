@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import confetti from "canvas-confetti"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface LotteryAnimationProps {
@@ -19,6 +18,7 @@ export default function LotteryAnimation({ usernames, hexSeed, winningIndex, onC
   const [speed, setSpeed] = useState(80) // ms between updates
   const [displayedUsernames, setDisplayedUsernames] = useState<string[]>([...usernames])
   const confettiRef = useRef<HTMLDivElement>(null)
+  const startTimeRef = useRef<number>(Date.now())
 
   // 控制动画阶段
   useEffect(() => {
@@ -37,13 +37,13 @@ export default function LotteryAnimation({ usernames, hexSeed, winningIndex, onC
         }
         setDisplayedUsernames(shuffled)
 
-        // 2秒后进入减速阶段
+        // 随机更新当前索引
         if (Date.now() % 10 === 0) {
           setCurrentIndex((prev) => (prev + 1) % usernames.length)
         }
 
         // 2秒后进入减速阶段
-        if (Date.now() - startTime > 2000) {
+        if (Date.now() - startTimeRef.current > 2000) {
           setPhase("slowdown")
           setSpeed(150)
         }
@@ -63,31 +63,27 @@ export default function LotteryAnimation({ usernames, hexSeed, winningIndex, onC
     } else if (phase === "reveal") {
       // 揭示获奖者
       timer = setTimeout(() => {
-        // 触发五彩纸屑效果
-        if (confettiRef.current) {
-          const rect = confettiRef.current.getBoundingClientRect()
-          const x = rect.left + rect.width / 2
-          const y = rect.top + rect.height / 2
-
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: {
-              x: x / window.innerWidth,
-              y: y / window.innerHeight,
-            },
-          })
-        }
-
         setPhase("complete")
-        setTimeout(onComplete, 2500) // 2.5秒后完成动画
       }, 1000)
+    } else if (phase === "complete") {
+      // 完成阶段 - 确保调用完成回调
+      timer = setTimeout(() => {
+        onComplete()
+      }, 2000)
     }
-
-    const startTime = Date.now()
 
     return () => clearTimeout(timer)
   }, [displayedUsernames, phase, speed, currentIndex, usernames, winningIndex, onComplete])
+
+  // 确保组件卸载时也调用完成回调
+  useEffect(() => {
+    return () => {
+      // 如果组件卸载但动画未完成，也调用完成回调
+      if (phase !== "complete") {
+        onComplete()
+      }
+    }
+  }, [onComplete, phase])
 
   return (
     <Card className="overflow-hidden">

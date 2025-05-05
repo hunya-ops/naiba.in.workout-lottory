@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -11,72 +10,20 @@ import { Card, CardContent } from "@/components/ui/card"
 import LotteryResults from "@/components/lottery-results"
 import LotteryAnimation from "@/components/lottery-animation"
 import { calculateLottery, type LotteryResult } from "@/lib/utils"
-import { saveLotteryData, getLotteryData } from "@/app/actions"
 import { Loader2 } from "lucide-react"
 
-interface LotteryFormProps {
-  initialLotteryId: string | null
-}
-
-export default function LotteryForm({ initialLotteryId }: LotteryFormProps) {
-  const router = useRouter()
-
+export default function LotteryForm() {
   const [usernames, setUsernames] = useState("")
   const [hexSeed, setHexSeed] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<LotteryResult | null>(null)
-  const [shareUrl, setShareUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingResults, setIsLoadingResults] = useState(false)
   const [showAnimation, setShowAnimation] = useState(false)
   const [animationData, setAnimationData] = useState<{
     usernames: string[]
     hexSeed: string
     winningIndex: number
   } | null>(null)
-
-  // 当组件挂载且有 ID 时，从服务器加载数据
-  useEffect(() => {
-    if (!initialLotteryId) return
-
-    async function fetchLotteryData() {
-      setIsLoadingResults(true)
-      setError(null)
-
-      try {
-        const response = await getLotteryData(initialLotteryId)
-
-        if (response.success && response.data) {
-          const { usernames, hexSeed } = response.data
-
-          // 验证数据结构
-          if (!usernames || !hexSeed) {
-            setError("抽奖数据格式无效")
-            return
-          }
-
-          setUsernames(usernames)
-          setHexSeed(hexSeed)
-
-          // 计算并显示结果
-          const lotteryResults = calculateLottery(usernames, hexSeed)
-          setResults(lotteryResults)
-
-          // 设置分享 URL
-          setShareUrl(`${window.location.origin}/?id=${initialLotteryId}`)
-        } else {
-          setError(response.error || "无法找到该抽奖结果，可能已过期或ID无效")
-        }
-      } catch (err) {
-        console.error("Error in fetchLotteryData:", err)
-        setError(`加载抽奖数据时出错: ${err instanceof Error ? err.message : "未知错误"}`)
-      } finally {
-        setIsLoadingResults(false)
-      }
-    }
-
-    fetchLotteryData()
-  }, [initialLotteryId])
 
   // 验证输入
   const validateInputs = (): boolean => {
@@ -101,7 +48,7 @@ export default function LotteryForm({ initialLotteryId }: LotteryFormProps) {
   }
 
   // 处理计算按钮点击
-  const handleCalculate = async () => {
+  const handleCalculate = () => {
     if (!validateInputs()) return
 
     setError(null)
@@ -123,28 +70,13 @@ export default function LotteryForm({ initialLotteryId }: LotteryFormProps) {
         hexSeed,
         winningIndex: lotteryResults.winningPosition - 1, // 转换为0基索引
       })
+
+      // 保存结果，但不立即显示（等动画完成后显示）
+      setResults(lotteryResults)
       setShowAnimation(true)
-
-      // 保存数据到服务器
-      const response = await saveLotteryData(usernames, hexSeed)
-
-      if (response.success && response.id) {
-        // 更新 URL，包含 ID
-        router.push(`/?id=${response.id}`)
-
-        // 设置分享 URL
-        setShareUrl(`${window.location.origin}/?id=${response.id}`)
-
-        // 保存结果，但不立即显示（等动画完成后显示）
-        setResults(lotteryResults)
-      } else {
-        setError(response.error || "保存抽奖数据时出错")
-        setShowAnimation(false)
-      }
     } catch (err) {
       console.error("Error in handleCalculate:", err)
       setError(`处理抽奖时出错: ${err instanceof Error ? err.message : "未知错误"}`)
-      setShowAnimation(false)
     } finally {
       setIsLoading(false)
     }
@@ -163,15 +95,6 @@ export default function LotteryForm({ initialLotteryId }: LotteryFormProps) {
       .toUpperCase()
 
     setHexSeed(randomHex)
-  }
-
-  if (isLoadingResults) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p>正在加载抽奖结果...</p>
-      </div>
-    )
   }
 
   return (
@@ -237,25 +160,6 @@ export default function LotteryForm({ initialLotteryId }: LotteryFormProps) {
           </Card>
 
           {results && <LotteryResults results={results} />}
-
-          {shareUrl && (
-            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-              <h3 className="text-lg font-medium mb-2">分享结果</h3>
-              <p className="text-sm text-gray-600 mb-2">分享此URL给他人，他们可以在任何设备上查看相同的抽奖结果：</p>
-              <div className="flex">
-                <Input readOnly value={shareUrl} className="flex-1" />
-                <Button
-                  className="ml-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl)
-                    alert("URL已复制到剪贴板！")
-                  }}
-                >
-                  复制
-                </Button>
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>

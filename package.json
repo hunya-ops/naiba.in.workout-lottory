@@ -59,8 +59,6 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@emotion/is-prop-valid": "latest",
-    "@upstash/redis": "latest",
-    "canvas-confetti": "latest",
     "framer-motion": "latest"
   },
   "devDependencies": {
