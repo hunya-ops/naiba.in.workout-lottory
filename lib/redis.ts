@@ -1,23 +1,23 @@
 import { Redis } from "@upstash/redis"
 
-// Create Redis client using environment variables
+// 创建 Redis 客户端
 export const redis = Redis.fromEnv()
 
-// TTL for lottery data (7 days in seconds)
+// 抽奖数据 TTL (7天，单位：秒)
 export const LOTTERY_DATA_TTL = 60 * 60 * 24 * 7
 
-// Helper function to safely parse JSON
-export function safeJsonParse(data: any) {
+// 安全解析 JSON 的辅助函数
+export function safeJsonParse<T>(data: unknown): T | null {
   if (!data) return null
 
   try {
-    // If data is already an object, return it
+    // 如果数据已经是对象，直接返回
     if (typeof data === "object" && data !== null) {
-      return data
+      return data as T
     }
 
-    // Otherwise try to parse it as JSON
-    return JSON.parse(data)
+    // 否则尝试解析为 JSON
+    return JSON.parse(data as string) as T
   } catch (error) {
     console.error("Error parsing JSON:", error)
     return null

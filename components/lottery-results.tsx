@@ -4,20 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
+import type { LotteryResult } from "@/lib/utils"
 
-type LotteryResult = {
-  shuffledUsernames: { username: string; index: number }[]
-  hexValue: string
-  decimalValue: number
-  totalUsernames: number
-  winningPosition: number
-  winningUsername: string
+interface LotteryResultsProps {
+  results: LotteryResult
 }
 
-export default function LotteryResults({ results }: { results: LotteryResult }) {
+export default function LotteryResults({ results }: LotteryResultsProps) {
   const { shuffledUsernames, hexValue, decimalValue, totalUsernames, winningPosition, winningUsername } = results
 
-  // Function to export results as text
+  // 导出结果为文本文件
   const exportResults = () => {
     const lines = [
       "抽奖结果",
@@ -38,13 +34,17 @@ export default function LotteryResults({ results }: { results: LotteryResult }) 
     })
 
     const text = lines.join("\n")
+    downloadTextFile(text, "lottery-results.txt")
+  }
 
-    // Create a blob and download
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+  // 下载文本文件的辅助函数
+  const downloadTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
+
     link.href = url
-    link.download = "lottery-results.txt"
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
